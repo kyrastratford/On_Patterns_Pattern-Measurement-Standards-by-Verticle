@@ -1,6 +1,7 @@
 import React, {
   useState,
   useEffect,
+  useMemo,
   useCallback,
   Suspense,
   Component,
@@ -18,7 +19,7 @@ const SHOE_TABS = [
     id: 'road-running',
     label: 'PERFORMANCE EVERYDAY',
     modelPath:
-      'https://raw.githubusercontent.com/kyrastratford/On_3D-Assets/main/shoe_measurement standards.glb',
+      'https://raw.githubusercontent.com/kyrastratford/On_3D-Assets/main/cloud-6_measurements_v02.glb',
     measurements: {
       'VAMP LENGTH': { men: '77 - 82 mm', women: '67 - 72 mm' },
       'TONGUE LENGTH': { men: '20 mm', women: '16 mm' },
@@ -47,7 +48,7 @@ const SHOE_TABS = [
     id: 'trail',
     label: 'PERFORMANCE RUNNING',
     modelPath:
-      'https://raw.githubusercontent.com/kyrastratford/On_3D-Assets/main/Clound Runner measurements_V01-optimized.glb',
+      'https://raw.githubusercontent.com/kyrastratford/On_3D-Assets/main/Clound Runner measurements_V02-optimized.glb',
     measurements: {
       'VAMP LENGTH': { men: '80 mm', women: '65 mm' },
       'TONGUE LENGTH': { men: '20 mm', women: '16 mm' },
@@ -76,7 +77,7 @@ const SHOE_TABS = [
     id: 'lifestyle',
     label: 'PERFORMANCE TENNIS',
     modelPath:
-      'https://raw.githubusercontent.com/kyrastratford/On_3D-Assets/main/The Roger_measurements_V03-optimized.glb',
+      'https://raw.githubusercontent.com/kyrastratford/On_3D-Assets/main/The Roger_measurements_V04-optimized.glb',
     measurements: {
       'VAMP LENGTH': { men: '82 mm', women: '72 mm' },
       'TONGUE LENGTH': { men: '20 mm', women: '16 mm' },
@@ -105,7 +106,7 @@ const SHOE_TABS = [
     id: 'track-field',
     label: 'PERFORMANCE OUTDOOR',
     modelPath:
-      'https://raw.githubusercontent.com/kyrastratford/On_3D-Assets/main/Cloud Rock Measurements_V01-optimized.glb',
+      'https://raw.githubusercontent.com/kyrastratford/On_3D-Assets/main/Cloud Rock Measurements_V02-optimized.glb',
     measurements: {
       'VAMP LENGTH': { men: '80 mm', women: '68 mm' },
       'TONGUE LENGTH': { men: '16-20 mm', women: '14-18 mm' },
@@ -134,7 +135,7 @@ const SHOE_TABS = [
     id: 'tennis',
     label: 'PERFORMANCE TRAINING',
     modelPath:
-      'https://raw.githubusercontent.com/kyrastratford/On_3D-Assets/main/Clound Pulse measurements_V01-optimized.glb',
+      'https://raw.githubusercontent.com/kyrastratford/On_3D-Assets/main/Clound Pulse measurements_V02-optimized.glb',
     measurements: {
       'VAMP LENGTH': { men: '82 mm', women: '70 mm' },
       'TONGUE LENGTH': { men: '18 mm', women: '14 mm' },
@@ -186,8 +187,32 @@ function ShoeModel({
   hoveredPart,
   setHoveredPart,
   onPartsExtracted,
+  showAll,
 }) {
-  const { nodes, materials } = useGLTF(modelPath);
+  const { scene, nodes, materials } = useGLTF(modelPath);
+
+  // Auto-fit calculation (handles mm, cm, m differences)
+  const autoScale = useMemo(() => {
+    if (!scene) return 0.004;
+
+    const shoeMesh = Object.values(nodes).find(
+      (n) =>
+        n &&
+        (n.isMesh || n.isLine || n.isLineSegments) &&
+        n.name &&
+        NON_CLICKABLE_KEYWORDS.some((k) => n.name.toUpperCase().includes(k))
+    );
+
+    const targetObject = shoeMesh || scene;
+    targetObject.updateMatrixWorld(true);
+
+    const box = new THREE.Box3().setFromObject(targetObject);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+
+    const maxDim = Math.max(size.x, size.y, size.z);
+    return maxDim > 0 ? 1.32 / maxDim : 0.004;
+  }, [scene, nodes]);
 
   useEffect(() => {
     if (!nodes) return;
@@ -205,7 +230,6 @@ function ShoeModel({
 
         if (NON_CLICKABLE_KEYWORDS.some((k) => upper.includes(k))) return false;
 
-        // 🎯 FILTER OUT ANY MEASUREMENT LINE WITHOUT VALID NUMBERS
         const spec = measurements[upper];
         return spec && (spec.men || spec.women);
       })
@@ -225,7 +249,7 @@ function ShoeModel({
   }, [nodes, measurements, onPartsExtracted]);
 
   return (
-    <group dispose={null}>
+    <group dispose={null} scale={autoScale}>
       {Object.keys(nodes).map((nodeName) => {
         const node = nodes[nodeName];
         if (!node || (!node.isMesh && !node.isLine && !node.isLineSegments))
@@ -244,7 +268,6 @@ function ShoeModel({
 
         const spec = measurements[displayTitle];
 
-        // 🎯 DO NOT RENDER 3D LINES THAT HAVE EMPTY MEASUREMENT VALUES
         if (!isShoeMesh && (!spec || (!spec.men && !spec.women))) {
           return null;
         }
@@ -262,6 +285,7 @@ function ShoeModel({
             onHoverPart={setHoveredPart}
             nodeType={node.type}
             spec={spec}
+            showAll={showAll}
           />
         );
       })}
@@ -273,6 +297,7 @@ export default function ShoeMeasurementViewer() {
   const [activeTabId, setActiveTabId] = useState('road-running');
   const [hoveredPart, setHoveredPart] = useState(null);
   const [partsList, setPartsList] = useState([]);
+  const [showAll, setShowAll] = useState(false);
 
   const currentTab =
     SHOE_TABS.find((t) => t.id === activeTabId) || SHOE_TABS[0];
@@ -285,6 +310,7 @@ export default function ShoeMeasurementViewer() {
     setActiveTabId(tabId);
     setHoveredPart(null);
     setPartsList([]);
+    setShowAll(false);
   };
 
   return (
@@ -307,7 +333,6 @@ export default function ShoeMeasurementViewer() {
         <aside className="sidebar-panel">
           <div className="sidebar-header">
             <h3>{currentTab.label.toUpperCase()}</h3>
-            <span className="sidebar-count">{partsList.length} SPECS</span>
           </div>
 
           <div className="sidebar-list">
@@ -332,6 +357,17 @@ export default function ShoeMeasurementViewer() {
         </aside>
 
         <div className="canvas-wrapper">
+          {/* 🎯 FLOATING TOGGLE BUTTON OVER CANVAS */}
+          <div className="viewer-floating-controls">
+            <button
+              className={`glass-toggle-btn ${showAll ? 'active-mode' : ''}`}
+              onClick={() => setShowAll((prev) => !prev)}
+            >
+              <span className={`toggle-dot ${showAll ? 'active' : ''}`} />
+              {showAll ? 'Hide All Measurements' : 'View All Measurements'}
+            </button>
+          </div>
+
           <CanvasErrorBoundary>
             <Canvas
               gl={{ toneMapping: THREE.NoToneMapping }}
@@ -345,7 +381,7 @@ export default function ShoeMeasurementViewer() {
               <directionalLight position={[10, 15, 10]} intensity={1.5} />
 
               <Suspense fallback={null}>
-                <Center scale={0.004}>
+                <Center key={currentTab.id} precise>
                   <group scale={[-1, 1, 1]} rotation={[0, Math.PI, 0]}>
                     <ShoeModel
                       key={currentTab.id}
@@ -354,6 +390,7 @@ export default function ShoeMeasurementViewer() {
                       hoveredPart={hoveredPart}
                       setHoveredPart={setHoveredPart}
                       onPartsExtracted={handlePartsExtracted}
+                      showAll={showAll}
                     />
                   </group>
                 </Center>

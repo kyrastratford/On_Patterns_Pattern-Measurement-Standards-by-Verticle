@@ -41,21 +41,28 @@
     z-index: 1;
   }
   
-  /* ==========================================================================
-     TOP FLOATING TAB BAR
-     ========================================================================== */
-  .top-tab-container {
+/* ==========================================================================
+   TOP FLOATING TAB BAR (RESPONSIVE & STACKABLE)
+   ========================================================================== */
+   .top-tab-container {
     position: absolute;
     top: 24px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 40;
     pointer-events: auto;
+    width: auto;
+    max-width: calc(100vw - 48px);
+    display: flex;
+    justify-content: center;
   }
   
   .tab-bar {
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;             /* 🎯 Allows tabs to wrap into rows instead of clipping */
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
     padding: 6px;
     background: rgba(15, 15, 22, 0.85);
     backdrop-filter: blur(16px) saturate(200%);
@@ -65,13 +72,14 @@
     box-shadow: 
       0 20px 40px rgba(0, 0, 0, 0.8),
       inset 0 1px 0.5px rgba(255, 255, 255, 0.6);
+    max-width: 100%;
   }
   
   .tab-btn {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.12);
     color: rgba(255, 255, 255, 0.7);
-    padding: 8px 18px;
+    padding: 8px 16px;
     border-radius: 10px;
     font-size: 11px;
     font-weight: 700;
@@ -80,6 +88,7 @@
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     white-space: nowrap;
+    flex: 0 1 auto;
   }
   
   .tab-btn:hover {
@@ -93,6 +102,54 @@
     border-color: rgba(216, 180, 254, 0.9);
     color: #ffffff;
     box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+  }
+  
+  /* ==========================================================================
+     RESPONSIVE BREAKPOINTS (STACKING BEHAVIOR)
+     ========================================================================== */
+  
+  /* Tablet & Intermediate widths: Tabs wrap cleanly into two balanced rows */
+  @media (max-width: 1180px) {
+    .top-tab-container {
+      top: 18px;
+      max-width: 520px;
+    }
+  
+    .tab-bar {
+      gap: 6px;
+    }
+  
+    .tab-btn {
+      font-size: 10px;
+      padding: 7px 12px;
+    }
+  }
+  
+  /* Mobile & Narrow viewports: Full vertical stack */
+  @media (max-width: 768px) {
+    .top-tab-container {
+      top: 14px;
+      left: 16px;
+      right: 16px;
+      transform: none;           /* Disables centering transform so it occupies natural width */
+      max-width: none;
+      width: auto;
+    }
+  
+    .tab-bar {
+      flex-direction: column;    /* 🎯 Stacks all tabs vertically into a sleek list */
+      width: 100%;
+      padding: 6px;
+      gap: 4px;
+      border-radius: 14px;
+    }
+  
+    .tab-btn {
+      width: 100%;
+      text-align: center;
+      padding: 7px 10px;
+      font-size: 10px;
+    }
   }
   
   /* ==========================================================================
@@ -279,11 +336,21 @@
     transform: scale(0.9);
   }
   
+  /* Compact scale when all badges are shown together */
+  .line-3d-badge.show-all {
+    border-color: rgba(226, 251, 175, 0.6);
+    background: rgba(15, 15, 22, 0.88);
+    transform: scale(0.82);
+    opacity: 0.92;
+  }
+  
+  /* Elevated hover state */
   .line-3d-badge.hovered {
     border-color: #38bdf8;
-    background: rgba(15, 23, 42, 0.95);
-    box-shadow: 0 0 15px rgba(56, 189, 248, 0.6);
+    background: rgba(15, 23, 42, 0.98);
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.7);
     transform: scale(1.15);
+    opacity: 1.0;
   }
   
   .badge-spec.men {
@@ -300,31 +367,68 @@
   }
   
   /* ==========================================================================
-     HUD & GLASS CALLOUT STYLES
+     FLOATING VIEWPORT CONTROLS
      ========================================================================== */
+  .viewer-floating-controls,
   .top-controls {
     position: absolute;
-    top: 28px;
-    right: 32px;
-    z-index: 20;
+    top: 24px;
+    right: 24px;
+    z-index: 40;
     pointer-events: auto;
   }
   
   .glass-toggle-btn {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: #ffffff;
-    padding: 12px 24px;
-    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    background: rgba(15, 15, 22, 0.85);
+    backdrop-filter: blur(16px) saturate(200%);
+    -webkit-backdrop-filter: blur(16px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    color: rgba(255, 255, 255, 0.85);
     font-weight: 700;
     font-size: 11px;
-    letter-spacing: 1.2px;
+    letter-spacing: 0.8px;
     text-transform: uppercase;
     cursor: pointer;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.75);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
   }
   
+  .glass-toggle-btn:hover {
+    background: rgba(30, 30, 42, 0.95);
+    border-color: rgba(56, 189, 248, 0.6);
+    color: #ffffff;
+    transform: translateY(-1px);
+  }
+  
+  .glass-toggle-btn.active-mode {
+    background: rgba(226, 251, 175, 0.15);
+    border-color: #e2fbaf;
+    color: #e2fbaf;
+    box-shadow: 0 0 20px rgba(226, 251, 175, 0.25);
+  }
+  
+  .toggle-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.35);
+    transition: all 0.25s ease;
+    flex-shrink: 0;
+  }
+  
+  .toggle-dot.active {
+    background-color: #e2fbaf;
+    box-shadow: 0 0 8px #e2fbaf;
+  }
+  
+  /* ==========================================================================
+     HUD & RECOVERY BANNER
+     ========================================================================== */
   .bottom-hud-container {
     position: absolute;
     bottom: 32px;
@@ -345,91 +449,4 @@
     color: rgba(255, 255, 255, 0.9);
     letter-spacing: 1px;
     text-transform: uppercase;
-  }
-  
-  .glazed-glass-card {
-    width: 280px;
-    background: rgba(15, 15, 22, 0.9);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 16px;
-    padding: 18px;
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9);
-    pointer-events: auto;
-  }
-  
-  .card-header {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    margin-bottom: 10px;
-  }
-  
-  .pill {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    background: rgba(168, 85, 247, 0.3);
-    color: #ffffff;
-    padding: 3px 8px;
-    border-radius: 10px;
-    border: 1px solid rgba(216, 180, 254, 0.5);
-  }
-  
-  .close-btn {
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    color: #ffffff;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    font-size: 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .glazed-glass-card h2 {
-    font-size: 14px;
-    font-weight: 700;
-    color: #ffffff;
-    margin-bottom: 8px;
-    text-transform: uppercase;
-  }
-  
-  .divider {
-    width: 100%;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.2);
-    margin-bottom: 10px;
-  }
-  
-  .glazed-glass-card p {
-    font-size: 11px;
-    line-height: 1.4;
-    color: rgba(255, 255, 255, 0.9);
-    margin-bottom: 14px;
-  }
-  
-  .technical-specs {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  
-  .spec-item {
-    display: flex;
-    justify-content: space-between;
-    font-size: 10px;
-    text-transform: uppercase;
-  }
-  
-  .spec-item span {
-    color: rgba(255, 255, 255, 0.65);
-  }
-  
-  .spec-item strong {
-    color: #ffffff;
   }

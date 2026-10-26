@@ -22,6 +22,7 @@ export default function ShoeMeasurementPart({
   geometry,
   nodeType,
   spec,
+  showAll = false, // 🎯 1. Receive showAll prop
 }) {
   const meshRef = useRef();
 
@@ -50,6 +51,14 @@ export default function ShoeMeasurementPart({
     return [c.x, c.y, c.z];
   }, [geometry]);
 
+  // Robust raycasting for Meshes, Lines, and LineSegments
+  const raycastHandler = useMemo(() => {
+    if (isNonClickable) return () => {};
+    if (nodeType === "LineSegments") return THREE.LineSegments.prototype.raycast;
+    if (nodeType === "Line") return THREE.Line.prototype.raycast;
+    return THREE.Mesh.prototype.raycast;
+  }, [isNonClickable, nodeType]);
+
   const clonedMaterial = useMemo(() => {
     if (!material) {
       return new THREE.MeshStandardMaterial({
@@ -73,9 +82,9 @@ export default function ShoeMeasurementPart({
         m.opacity = 1.0;
         m.depthWrite = true;
       } else {
-        // 🎯 LINES REMAIN TRANSPARENT FOR HOVER DISSOLVE
+        // 🎯 LINES REMAIN TRANSLUCENT & PREVENT DEPTH WRITE CONFLICTS
         m.transparent = true;
-        m.depthWrite = true;
+        m.depthWrite = false;
         if (m.color) m.color.set(COLOR_CONFIG.default);
       }
     });
@@ -86,6 +95,9 @@ export default function ShoeMeasurementPart({
   useFrame(() => {
     if (!meshRef.current) return;
 
+    // Prioritize drawing: Hovered line (20) > All visible lines (10) > Idle lines (2) > Shoe (1)
+    meshRef.current.renderOrder = isHovered ? 20 : showAll ? 10 : isNonClickable ? 1 : 2;
+
     const mats = Array.isArray(meshRef.current.material)
       ? meshRef.current.material
       : [meshRef.current.material];
@@ -93,23 +105,32 @@ export default function ShoeMeasurementPart({
     mats.forEach((mat) => {
       if (!mat) return;
 
-      // 🎯 SHOE MODEL STAYS FULLY OPAQUE AT ALL TIMES
+      // 🎯 SHOE MODEL STAYS FULLY OPAQUE
       if (isNonClickable) {
         mat.opacity = 1.0;
         mat.transparent = false;
         return;
       }
 
-      // 🎯 MEASUREMENT LINES DYNAMIC FADE & HOVER HIGHLIGHT
+      // 🎯 MEASUREMENT LINES DYNAMIC HIGHLIGHT & VIEW-ALL STATE
       if (isHovered) {
         mat.opacity = 1.0;
         if ("color" in mat && mat.color) mat.color.set(COLOR_CONFIG.hover);
         if ("emissive" in mat && mat.emissive) {
           mat.emissive.set(COLOR_CONFIG.hover);
-          mat.emissiveIntensity = 0.9;
+          mat.emissiveIntensity = 1.0;
+        }
+      } else if (showAll) {
+        // All lines stay brightly illuminated when toggled on
+        mat.opacity = 0.95;
+        if ("color" in mat && mat.color) mat.color.set(COLOR_CONFIG.default);
+        if ("emissive" in mat && mat.emissive) {
+          mat.emissive.set(COLOR_CONFIG.default);
+          mat.emissiveIntensity = 0.55;
         }
       } else {
-        mat.opacity = hoveredPart ? 0.2 : 0.85;
+        // Idle mode: dim other lines if one is hovered, otherwise rest at 0.85
+        mat.opacity = hoveredPart ? 0.15 : 0.85;
         if ("color" in mat && mat.color) mat.color.set(COLOR_CONFIG.default);
         if ("emissive" in mat && mat.emissive) {
           mat.emissive.set(COLOR_CONFIG.default);
@@ -134,7 +155,7 @@ export default function ShoeMeasurementPart({
       scale={scale}
       geometry={geometry}
       material={clonedMaterial}
-      raycast={isNonClickable ? () => {} : THREE.Mesh.prototype.raycast}
+      raycast={raycastHandler}
       onPointerOver={(e) => {
         e.stopPropagation();
         if (!isNonClickable) onHoverPart(displayTitle);
@@ -144,16 +165,17 @@ export default function ShoeMeasurementPart({
         if (!isNonClickable) onHoverPart(null);
       }}
     >
-      {!isNonClickable && spec && isHovered && (
+      {/* 🎯 DISPLAY BADGE ON HOVER OR WHEN SHOW ALL IS ACTIVE */}
+      {!isNonClickable && spec && (isHovered || showAll) && (
         <Html
           position={centerPosition}
           center
           style={{
             pointerEvents: "none",
-            zIndex: 100,
+            zIndex: isHovered ? 100 : 10,
           }}
         >
-          <div className="line-3d-badge hovered">
+          <div className={`line-3d-badge ${isHovered ? "hovered" : "show-all"}`}>
             <span className="badge-spec men">M: {spec.men}</span>
             <span className="badge-divider">|</span>
             <span className="badge-spec women">W: {spec.women}</span>
